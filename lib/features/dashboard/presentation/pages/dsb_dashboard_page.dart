@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fintech_core/core/data_async_value/base_async_value_bloc.dart';
 import 'package:fintech_core/core/errors/failures.dart';
+import 'package:fintech_core/core/sdui/sdui_parser.dart';
 import 'package:fintech_core/features/dashboard/domain/entities/dsb_summary_entity.dart';
 import 'package:fintech_core/features/dashboard/presentation/bloc/dsb_summary_bloc.dart';
 
@@ -40,6 +41,12 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
                   Text('Account: ${summary.accountNumber}', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text('Balance: \$${summary.totalBalance.toStringAsFixed(2)}', style: Theme.of(context).textTheme.headlineMedium),
+                  
+                  if (summary.dynamicBanner != null) ...[
+                    const SizedBox(height: 16),
+                    SduiParserWidget(node: summary.dynamicBanner!),
+                  ],
+
                   const SizedBox(height: 24),
                   const Text('Recent Transactions:', style: TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(),

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:fintech_core/core/network/json_map.dart';
+import 'package:fintech_core/core/sdui/sdui_node.dart';
 
 class DsbTransactionModel extends Equatable {
   const DsbTransactionModel({
@@ -47,6 +48,7 @@ class DsbSummaryModel extends Equatable {
     this.totalBalance,
     this.accountNumber,
     this.recentTransactions,
+    this.dynamicBanner,
   });
 
   factory DsbSummaryModel.fromJson(Map<String, dynamic>? json) {
@@ -59,6 +61,9 @@ class DsbSummaryModel extends Equatable {
         ['recent_transactions'],
         (item) => DsbTransactionModel.fromJson(item as Map<String, dynamic>?),
       ),
+      dynamicBanner: jsonMap.mapIsExist('dynamic_banner')
+          ? SduiNode.fromJson(jsonMap.mapToMap('dynamic_banner'))
+          : null,
     );
   }
 
@@ -67,13 +72,15 @@ class DsbSummaryModel extends Equatable {
       'total_balance': totalBalance,
       'account_number': accountNumber,
       'recent_transactions': recentTransactions?.map((x) => x.toJson()).toList(),
+      'dynamic_banner': dynamicBanner?.toJson(),
     };
   }
 
   final double? totalBalance;
   final String? accountNumber;
   final List<DsbTransactionModel>? recentTransactions;
+  final SduiNode? dynamicBanner;
 
   @override
-  List<Object?> get props => [totalBalance, accountNumber, recentTransactions];
+  List<Object?> get props => [totalBalance, accountNumber, recentTransactions, dynamicBanner];
 }

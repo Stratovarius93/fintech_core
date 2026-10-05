@@ -119,6 +119,14 @@ class JsonMap {
     return _getValue(keyOrKeys) != null;
   }
 
+  Map<String, dynamic> mapToMap(dynamic keyOrKeys) {
+    final value = _getValue(keyOrKeys);
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return <String, dynamic>{};
+  }
+
   String _normalizeDateTimeString(String input) {
     var value = input.trim();
 

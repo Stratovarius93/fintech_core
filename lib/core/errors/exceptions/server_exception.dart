@@ -1,15 +1,18 @@
 import 'package:flutter/foundation.dart';
+import '../../services/crashlytics_service.dart';
 
 /// Exception thrown when a network request fails or the server returns an error.
 class ServerException implements Exception {
-  const ServerException({
+  ServerException({
     required this.where,
     required this.statusCode,
     this.message = '',
     this.responseData,
     this.stackTrace,
     this.customKeys,
-  });
+  }) {
+    CrashlyticsService.instance.recordError(this, stackTrace, reason: 'Server Error ($statusCode) in $where');
+  }
 
   /// The name of the request or feature where the error occurred.
   final String where;

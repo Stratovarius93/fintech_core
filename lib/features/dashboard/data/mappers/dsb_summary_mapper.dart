@@ -20,6 +20,7 @@ extension DsbSummaryModelX on DsbSummaryModel {
       accountNumber: accountNumber ?? '',
       recentTransactions:
           recentTransactions?.map((e) => e.toEntity()).toList() ?? [],
+      dynamicBanner: dynamicBanner,
     );
   }
 }

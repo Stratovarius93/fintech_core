@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:fintech_core/core/sdui/sdui_node.dart';
 
 class DsbTransactionEntity extends Equatable {
   const DsbTransactionEntity({
@@ -24,12 +25,14 @@ class DsbSummaryEntity extends Equatable {
     required this.totalBalance,
     required this.accountNumber,
     required this.recentTransactions,
+    this.dynamicBanner,
   });
 
   final double totalBalance;
   final String accountNumber;
   final List<DsbTransactionEntity> recentTransactions;
+  final SduiNode? dynamicBanner;
 
   @override
-  List<Object?> get props => [totalBalance, accountNumber, recentTransactions];
+  List<Object?> get props => [totalBalance, accountNumber, recentTransactions, dynamicBanner];
 }

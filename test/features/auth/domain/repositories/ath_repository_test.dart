@@ -49,7 +49,7 @@ void main() {
       'should return Left(ServiceFailure) when ServerException occurs',
       () async {
         when(() => mockDataSource.login(tEmail, tPassword)).thenThrow(
-          const ServerException(
+          ServerException(
             where: 'login',
             statusCode: 400,
             message: 'Error',
@@ -70,7 +70,7 @@ void main() {
       'should return Left(GeneralFailure) when ParseException occurs',
       () async {
         when(() => mockDataSource.login(tEmail, tPassword)).thenThrow(
-          const ParseException(where: 'login', message: 'Parse error'),
+          ParseException(where: 'login', message: 'Parse error'),
         );
 
         final result = await repository.login(tEmail, tPassword);

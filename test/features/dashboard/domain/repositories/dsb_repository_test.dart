@@ -64,7 +64,7 @@ void main() {
       'should return Left(ServiceFailure) when ServerException occurs',
       () async {
         when(() => mockDataSource.getSummary()).thenThrow(
-          const ServerException(
+          ServerException(
             where: 'summary',
             statusCode: 500,
             message: 'Error',
@@ -85,7 +85,7 @@ void main() {
       'should return Left(GeneralFailure) when ParseException occurs',
       () async {
         when(() => mockDataSource.getSummary()).thenThrow(
-          const ParseException(where: 'summary', message: 'Parse error'),
+          ParseException(where: 'summary', message: 'Parse error'),
         );
 
         final result = await repository.getSummary();

@@ -31,6 +31,12 @@ En lugar de escribir Eventos y Estados repetitivos para cada pantalla, se implem
 Para cumplir con la necesidad de manejar **alta latencia o indisponibilidad parcial**, creamos un `NetworkSimulatorInterceptor` que inyecta latencias y errores de forma aleatoria o controlada en entorno de desarrollo.
 Toda petición pasa por un mixin `NetworkHandler` que atrapa errores de Dio (`DioException`) o fallos de parseo (`ParseException`) centralizándolos. El Repositorio traduce estas excepciones a dominios seguros usando `Either<Failure, Success>` de `dartz`.
 
+### Decisión: Offline-First con Caché Local (Hive)
+Para garantizar operatividad continua frente a la volatilidad de la red, adoptamos un patrón **Offline-First**.
+- Cada respuesta exitosa de red (ej. los datos del Dashboard) se almacena serializada en **Hive** (elegido por su alta velocidad y sincronía).
+- Si el servicio global `NetworkInfo` detecta pérdida de conexión, o el interceptor lanza un timeout, el Repositorio recupera automáticamente la última información guardada en caché y se la presenta al usuario sin interrumpir el flujo.
+- Si el dispositivo está sin red y **no hay** caché previa, el sistema despacha un `NotInternetFailure` semántico, el cual la capa de Presentación mapea a una pantalla específica de desconexión.
+
 **Parseo Seguro:**
 Se utiliza una clase propia `JsonMap` que intercepta errores de tipado o valores nulos cuando se transforman los JSONs que llegan del backend. La entidad y el modelo se independizaron para asegurar pureza mediante `Mappers` extendidos.
 
@@ -54,3 +60,29 @@ Para evitar redundancia de tests y aprovechar el core genérico:
 ## 8. Singletons & Dependency Injection
 ### Decisión: Singletons Pasados por Inyección
 Los Singletons (ej. `NetworkInfo.instance`, `DsbLocalStore.instance`) se utilizan para servicios globales o acceso a bases de datos locales. Para mantener la testeabilidad y respetar los principios de arquitectura limpia, estas instancias estáticas deben ser inyectadas en los constructores de los Repositorios a través de los Inyectores de dependencia (ej. `dsbInjector()`), en lugar de consumirse directamente en los métodos internos. Esto permite usar mocks fácilmente y controlar de forma determinista la ausencia de conexión, retornando clases concretas de error como `NotInternetFailure`.
+
+## 9. Server Driven UI (SDUI)
+### Decisión: Implementación mediante Patrón Registry y JSON
+Para soportar interfaces dinámicas (ej. Banners promocionales, ofertas), la arquitectura incluye un motor SDUI nativo.
+- El servidor envía un árbol JSON definiendo nodos (`type`, `properties`, `children`).
+- El cliente utiliza `SduiNodeEntity` y `SduiRegistry` (Singleton factory) para mapear esos tipos a Widgets reales (ej. `text` -> `Text`, `column` -> `Column`).
+- Si un componente no está registrado, se renderiza un `SizedBox.shrink()` como *fallback* evitando fallos fatales en producción.
+- Toda la validación de nulos al parsear el JSON depende de `JsonMap`.
+
+## 10. Variables de Entorno (Environment Variables)
+### Decisión: Separación de URLs usando `.env` y `flutter_dotenv`
+Todas las rutas base de APIs, tokens o variables sensibles deben almacenarse en archivos de entorno (`.env`) en lugar de estar quemadas (hardcoded) en el código. Si no se encuentra configurada, la aplicación lanzará una excepción (Fail-Fast) para evitar falsos positivos y nunca exponer datos por defecto.
+*(Nota: Para propósitos de pruebas técnicas o revisión, el archivo `.env` se incluye temporalmente en el repositorio, pero en un entorno corporativo real este archivo es ignorado por git (`.gitignore`) y los secretos se inyectan a través de CI/CD).*
+
+## 11. Integración con Servicios Externos (Ecosistema) y Push Notifications
+### Decisión: Servicios Modulares Inyectables
+Para integrar servicios externos de analítica/engagement (ej. `CleverTap` o `Amplitude`) y envío de notificaciones push (ej. `Firebase Cloud Messaging`), hemos creado clases `Singleton` dentro de `lib/core/services`.
+- **AnalyticsService**: Centraliza toda recolección de eventos para evitar mezclar lógica de negocio del banco con SDKs de marketing. Permite traquear fallos de UX para generar funnels en herramientas de análisis.
+- **PushNotificationService**: Configura los canales en Android/iOS usando `flutter_local_notifications` permitiendo reaccionar a cargas útiles en background para notificar al usuario (ej. de transacciones sospechosas o exitosas).
+
+## 12. Monitoreo y Observabilidad en Producción
+### Decisión: Estrategia de Triangulación (Crashlytics, APM, Sentry)
+Siendo una aplicación Fintech (Crítica Nivel 1), el monitoreo en producción requiere detectar problemas operativos y de UX en tiempo real. Estrategia a utilizar:
+1. **Detección de Errores Fatales (Crashlytics / Sentry):** Todo fallo no atrapado y las excepciones semánticas (ej. `NotInternetFailure` o `ParseException`) deben registrarse automáticamente. El interceptor de red envía métricas sobre todos los Status Code `4xx` y `5xx`.
+2. **Rendimiento APM (Firebase Performance / Datadog):** Monitorear la latencia (TTFB) de los microservicios del banco. Si la carga del Dashboard excede los X milisegundos de forma concurrente, dispara una alerta (PagerDuty).
+3. **Observabilidad UX (CleverTap / Amplitude):** Utilizando el `AnalyticsService`, registramos eventos customizados como `login_failed_biometrics` o `dashboard_timeout`. Permite identificar problemas en los que la app no crashea, pero los usuarios no pueden completar sus tareas (degradación de experiencia).
