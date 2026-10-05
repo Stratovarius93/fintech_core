@@ -22,6 +22,16 @@ class DsbTransactionModel extends Equatable {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'date': date?.toIso8601String(),
+      'amount': amount,
+      'description': description,
+      'is_credit': isCredit,
+    };
+  }
+
   final String? id;
   final DateTime? date;
   final double? amount;
@@ -50,6 +60,14 @@ class DsbSummaryModel extends Equatable {
         (item) => DsbTransactionModel.fromJson(item as Map<String, dynamic>?),
       ),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'total_balance': totalBalance,
+      'account_number': accountNumber,
+      'recent_transactions': recentTransactions?.map((x) => x.toJson()).toList(),
+    };
   }
 
   final double? totalBalance;

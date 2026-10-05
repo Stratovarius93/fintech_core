@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'core/network/dio_client.dart';
 import 'features/auth/ath_injector.dart';
 import 'features/auth/presentation/bloc/ath_blocs.dart';
@@ -7,7 +8,9 @@ import 'features/auth/presentation/pages/ath_login_page.dart';
 import 'features/dashboard/dsb_injector.dart';
 import 'features/dashboard/presentation/bloc/dsb_blocs.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   runApp(const MyApp());
 }
 

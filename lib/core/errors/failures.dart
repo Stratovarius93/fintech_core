@@ -57,3 +57,8 @@ class InformativeFailure extends Failure {
 class IncorrectClientInfoFailure extends Failure {
   const IncorrectClientInfoFailure(super.msg);
 }
+
+/// Used when there is no active internet connection and no cached data is available.
+class NotInternetFailure extends Failure {
+  const NotInternetFailure([super.message = 'No internet connection available']);
+}

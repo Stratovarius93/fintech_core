@@ -50,3 +50,7 @@ Para evitar redundancia de tests y aprovechar el core genérico:
 - **Features (BLoC)**: Se utiliza `blocTest` enfocado estrictamente en verificar que la lógica de negocio emita el flujo correcto (ej. `Initial state` y los estados exitosos). No se re-testean flujos de errores genéricos que ya cubre el core.
 - **Inyección de Dependencias**: Se incluyen smoke tests (`testWidgets`) para validar que las listas de providers (ej. `athBlocs`, `athInjector`) inyecten y expongan correctamente las dependencias en el árbol de Flutter (`context.read`).
 - **Data y Red**: Se mockean clientes HTTP (ej. Dio) usando `mocktail`. Los Repositorios se testean validando rigurosamente su capacidad para atrapar excepciones específicas y devolver clases seguras `Either<Failure, T>`.
+
+## 8. Singletons & Dependency Injection
+### Decisión: Singletons Pasados por Inyección
+Los Singletons (ej. `NetworkInfo.instance`, `DsbLocalStore.instance`) se utilizan para servicios globales o acceso a bases de datos locales. Para mantener la testeabilidad y respetar los principios de arquitectura limpia, estas instancias estáticas deben ser inyectadas en los constructores de los Repositorios a través de los Inyectores de dependencia (ej. `dsbInjector()`), en lugar de consumirse directamente en los métodos internos. Esto permite usar mocks fácilmente y controlar de forma determinista la ausencia de conexión, retornando clases concretas de error como `NotInternetFailure`.

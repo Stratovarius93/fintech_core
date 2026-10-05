@@ -35,3 +35,7 @@ You are an elite Senior Flutter Developer and rigorous Code Reviewer building a 
    - **BLoC**: BLoC tests only need to cover the happy path (`[loading, success]`) or specific exceptions via `blocTest`. Since `base_async_value` covers the generic state transitions, do NOT re-test generic error emissions unnecessarily.
    - **DI / Injection**: Test `Injector` and `Blocs` lists to ensure they properly expose `RepositoryProvider` and `SingleChildWidget`. Use `testWidgets` and `context.read` for verifying BLoC providers.
    - **Data Layer**: Use `mocktail` for `DioClient` or `Network` dependencies. Verify that exceptions (`ServerException`, `ParseException`) are correctly mapped to `Left(Failure)` objects in the Repository tests.
+10. **Singletons & Dependency Injection**:
+    - **Singletons**: Use the Singleton pattern (e.g., `NetworkInfo.instance`, `LocalStore.instance`) for cross-cutting concerns, local databases, or network connection checkers.
+    - **Injection**: Singletons MUST be passed as constructor dependencies to Repositories (e.g., via `Injector` list) rather than being invoked directly inside the repository methods. This ensures testability via constructor mocking.
+    - **Offline Handling**: Repositories must handle offline states by checking the injected `NetworkInfo`. If offline, fall back to cached data. If no cache exists, return `Left(NotInternetFailure('...'))`.
