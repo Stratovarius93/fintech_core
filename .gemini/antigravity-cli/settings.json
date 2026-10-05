@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "read_file(*)",
+      "command(find)",
+      "command(regex:^find .*$)",
+      "command(regex:^(rg|grep) .*$)",
+      "command(regex:^git --no-pager (diff|log|show|status)( .*)?$)",
+      "command(regex:^git (diff|log|show|status|merge-base|ls-files|rev-parse)( .*)?$)",
+      "command(regex:^gh pr (view|diff|checks)( .*)?$)",
+      "command(fvm flutter analyze)",
+      "command(regex:^fvm flutter test( .*)?$)",
+      "command(regex:^fvm flutter pub run build_runner build( .*)?$)",
+      "command(regex:^bash \\.github/scripts/(check_forbidden_patterns|check_test_coverage)\\.sh( .*)?$)"
+    ]
+  }
+}
