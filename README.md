@@ -31,6 +31,19 @@ El proyecto utiliza `flutter_dotenv` para proteger secretos y URLs (siguiendo di
    ```
    *(Nota: SDUI_URL apunta al backend Serverless usado para servir los Banners dinámicos en el Dashboard).*
 
+### Estructura del Server Driven UI (SDUI)
+Para contexto de evaluación, el servicio de Google Sheets (`SDUI_URL`) retorna el siguiente formato JSON, el cual es parseado por nuestro `SduiRegistry` y pintado dinámicamente como Widgets nativos:
+
+```json
+{
+  "type": "promo",
+  "properties": {
+    "title": "Promoción de Bienvenida",
+    "subtitle": "Obtén beneficios exclusivos hoy"
+  }
+}
+```
+
 ### Dependencias
 Instala los paquetes necesarios:
 ```bash
