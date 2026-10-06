@@ -1,88 +1,49 @@
-# Documentación de Arquitectura y Decisiones Técnicas - Fintech Core
+# Documentación de Arquitectura y Decisiones Técnicas (ADR) - Fintech Core
+
+A continuación se detallan las decisiones arquitectónicas clave tomadas durante el desarrollo de la aplicación financiera, siguiendo el formato estándar de *Architecture Decision Records* (ADR).
 
 ## 1. Patrón Arquitectónico Principal
-### Decisión: Pragmatic Clean Architecture (Feature-First)
-Hemos adoptado una arquitectura basada en **Clean Architecture**, pero de manera pragmática eliminando la capa de **Casos de Uso (Use Cases)**. La estructura de carpetas está orientada a **Features**, lo que significa que todo el código relacionado a una funcionalidad específica (ej. `auth`, `dashboard`) vive dentro de su propia carpeta modular.
+- **Problema a resolver:** Se requería una arquitectura limpia, escalable y mantenible para una app financiera, que soporte la división del trabajo en equipos (squads) sin caer en la sobreingeniería o "verbosidad" excesiva.
+- **Alternativas evaluadas:** 
+  - *Layer-First (MVC/MVVM clásico):* Agrupar por capas lógicas (todos los modelos juntos, todos los blocs juntos).
+  - *Clean Architecture Clásica:* Uso riguroso de Casos de Uso (Use Cases) e interfaces abstractas para cada interacción.
+- **Opción seleccionada:** *Pragmatic Clean Architecture (Feature-First)*. Agrupación física por funcionalidades (`features`), eliminando la capa redundante de *Casos de Uso* y comunicando directamente el BLoC con el Repositorio.
+- **Trade-offs:** Se sacrifica la pureza teórica estricta de Clean Architecture (al no tener interactors aislados) a cambio de una altísima velocidad de desarrollo y menor *boilerplate*.
+- **Impacto a largo plazo:** Permite escalar fácilmente hacia arquitecturas de Micro-Frontends. Cada "feature" puede aislarse y empaquetarse en un submódulo independiente sin romper el resto de la app, facilitando el trabajo paralelo de cientos de desarrolladores.
 
-**Alternativas descartadas:**
-- *Clean Architecture Clásica (con Casos de Uso):* Descartada por recomendación de Google Developer Experts para este contexto. Introducía demasiada verbosidad y abstracciones innecesarias.
-- *Estructura Layer-First (todas las vistas en una carpeta, todos los blocs en otra):* Descartada porque dificulta la escalabilidad en equipos grandes y rompe la modularidad al intentar extraer un feature como micro-aplicativo.
+## 2. Gestión de Estado y Flujo de Datos UI
+- **Problema a resolver:** El manejo repetitivo de estados de red (Loading, Success, Error, Empty) en cada pantalla genera código espagueti y componentes acoplados que son difíciles de probar unitariamente.
+- **Alternativas evaluadas:**
+  - *Cubit genéricos:* Simples pero menos rastreables para sistemas de analítica y logs.
+  - *Estados y Eventos manuales por Feature:* Escribir `LoginLoading`, `LoginSuccess`, `DashboardLoading`, `DashboardError`, etc. de forma repetitiva.
+- **Opción seleccionada:** *BaseDataBloc y BaseAsyncValueState genéricos*. Se creó un núcleo genérico asíncrono. Todos los features extienden esta base, heredando nativamente los estados y las transiciones lógicas sin necesidad de reescribir código.
+- **Trade-offs:** Existe una ligera curva de aprendizaje inicial para que los nuevos desarrolladores entiendan el uso de genéricos (`<T>`) en Dart, pero una vez asimilado, el ahorro de código es masivo.
+- **Impacto a largo plazo:** Estandariza la experiencia de usuario (UX). Al haber un solo motor de estados, si en el futuro se decide cambiar la forma en que se muestran los "Loadings" o los "Snackbars de Error", se modifica un solo archivo Core y afecta a toda la aplicación de inmediato.
 
-**Impacto a largo plazo:**
-La arquitectura orientada a features permitirá que en el futuro el proyecto pueda evolucionar fácilmente hacia un modelo de **Micro Frontends** o ser administrado por equipos independientes (Squads).
+## 3. Resiliencia, Red y Manejo de Errores (Degraded Network)
+- **Problema a resolver:** Las aplicaciones financieras deben ser robustas ante condiciones de red intermitentes, caídas de microservicios o alta latencia, sin mostrar pantallas congeladas o errores técnicos (ej. *SocketException*) al usuario final.
+- **Alternativas evaluadas:**
+  - *Validación en cada endpoint:* Manejar `try-catch` y lógicas de reintento de forma manual en cada llamada HTTP.
+  - *Cacheo manual:* Guardar la data en memoria local directamente desde la vista.
+- **Opción seleccionada:** *NetworkHandler Mixin, Interceptor de Simulación y Caché Offline-First (Hive)*. 
+  Toda petición HTTP es filtrada por un interceptor inteligente. Si la red falla de verdad (o por la simulación aleatoria de estrés que creamos), el mixin atrapa el error de `Dio` y el Repositorio recupera automáticamente la información almacenada en `Hive` silenciosamente.
+- **Trade-offs:** La estrategia Offline-First exige una cuidadosa sincronización (invalidación de caché en el futuro) para asegurar que no se muestren balances o saldos financieros desactualizados de forma permanente.
+- **Impacto a largo plazo:** Garantiza una altísima disponibilidad percibida. El usuario siempre verá una interfaz funcional y su saldo reciente, aumentando la confianza en el banco incluso en condiciones de movilidad extrema (ej. en el metro o ascensores).
 
-## 2. Inyección de Dependencias
-### Decisión: `RepositoryProvider` (flutter_bloc) nativo y escalable
-La inyección de dependencias se maneja directamente en el árbol de widgets. Para asegurar la escalabilidad y limpieza a medida que el proyecto crece, cada feature expone dos constructores de listas: un inyector de repositorios (ej. `athInjector()` que devuelve `List<RepositoryProvider<dynamic>>`) y un inyector de estados (ej. `athBlocs()` que devuelve `List<SingleChildWidget>`). Estas listas se combinan en la raíz de la aplicación usando `MultiRepositoryProvider` y `MultiBlocProvider`.
+## 4. Server Driven UI (SDUI) Dinámico
+- **Problema a resolver:** El banco necesita desplegar promociones o alertas críticas (Banners) dinámicamente en el Dashboard sin tener que pasar por el lento proceso de revisión y publicación de las tiendas (App Store / Play Store).
+- **Alternativas evaluadas:**
+  - *Firebase Remote Config:* Excelente para variables simples, pero limita el dinamismo a estructuras pre-definidas y no a componentes UI enteros.
+  - *Librerías completas de SDUI:* Como `mirai` o `json_dynamic_widget`. Muy pesadas, dependientes de terceros y con exceso de funcionalidades.
+- **Opción seleccionada:** *Motor SDUI propio + API Serverless (Google Apps Script)*. Se creó un `SduiRegistry` que mapea JSONs ligeros a componentes nativos de Flutter. Como backend rápido para el MVP, se integró una hoja de cálculo de Google Sheets que actúa como API REST para modificar el diseño desde la nube en tiempo real.
+- **Trade-offs:** El motor propio inicial solo cubre los widgets estrictamente necesarios (Text, Container, Banner). Además, usar Google Sheets es una solución creativa temporal para validación rápida (MVP), pero requerirá migración a un backend formal (AWS/Azure) antes de ir a producción masiva.
+- **Impacto a largo plazo:** Desacopla la vista de la lógica dura. En el futuro, el equipo de marketing o producto puede construir promociones y pantallas desde un CMS propietario sin requerir el despliegue de los desarrolladores móviles.
 
-**Alternativas descartadas:**
-- *`get_it` / `injectable`:* Se descartó para evitar acoplamiento a Service Locators globales. Inyectar a través del context de Flutter garantiza que los repositorios sigan el mismo ciclo de vida de la UI y respeta el paradigma declarativo.
-
-## 3. Estado de la Interfaz y Flujo de Datos
-### Decisión: `BaseDataBloc` y `BaseAsyncValueState`
-En lugar de escribir Eventos y Estados repetitivos para cada pantalla, se implementó un núcleo genérico (`BaseDataBloc`) que maneja nativamente las transiciones (Initial, Loading, Success, Error).
-
-**Trade-offs:**
-- *Pro:* Reducción masiva de boilerplate. La UI siempre sabe cómo reaccionar utilizando extensiones declarativas como `mapProvided` y `whenProvided`.
-- *Contra:* Ligera curva de aprendizaje inicial para entender el uso de genéricos, pero altamente compensada por la velocidad de desarrollo.
-
-## 4. Resiliencia, Red y Manejo de Errores (Offline-First / Degraded Network)
-### Decisión: Interceptor de Simulación y `NetworkHandler`
-Para cumplir con la necesidad de manejar **alta latencia o indisponibilidad parcial**, creamos un `NetworkSimulatorInterceptor` que inyecta latencias y errores de forma aleatoria o controlada en entorno de desarrollo.
-Toda petición pasa por un mixin `NetworkHandler` que atrapa errores de Dio (`DioException`) o fallos de parseo (`ParseException`) centralizándolos. El Repositorio traduce estas excepciones a dominios seguros usando `Either<Failure, Success>` de `dartz`.
-
-### Decisión: Offline-First con Caché Local (Hive)
-Para garantizar operatividad continua frente a la volatilidad de la red, adoptamos un patrón **Offline-First**.
-- Cada respuesta exitosa de red (ej. los datos del Dashboard) se almacena serializada en **Hive** (elegido por su alta velocidad y sincronía).
-- Si el servicio global `NetworkInfo` detecta pérdida de conexión, o el interceptor lanza un timeout, el Repositorio recupera automáticamente la última información guardada en caché y se la presenta al usuario sin interrumpir el flujo.
-- Si el dispositivo está sin red y **no hay** caché previa, el sistema despacha un `NotInternetFailure` semántico, el cual la capa de Presentación mapea a una pantalla específica de desconexión.
-
-**Parseo Seguro:**
-Se utiliza una clase propia `JsonMap` que intercepta errores de tipado o valores nulos cuando se transforman los JSONs que llegan del backend. La entidad y el modelo se independizaron para asegurar pureza mediante `Mappers` extendidos.
-
-## 5. Riesgos Técnicos y Supuestos
-- **Riesgo:** El almacenamiento caché (por ej. con `Hive`) puede corromperse en actualizaciones mayores del modelo de datos si no se planifican bien migraciones o TypeAdapters.
-- **Supuesto:** Se asume que el backend respeta una estructura estándar en sus respuestas de error (con código y mensaje), los cuales son interpretados por el `ServerException`.
-- **Estrategia de Escalamiento:** El uso de prefijos únicos por archivo (ej. `ath_`) evita colisiones de nombres. Al escalar, cada feature puede ser extraído a un "package" local independiente dentro de un monorepo (usando Melos).
-
-## 6. Documentación de Código
-### Decisión: Clean Code y Comentarios en Inglés
-Todo el código y sus comentarios técnicos internos se escriben en inglés, garantizando alineación con los estándares globales de Clean Code.
-
-## 7. Estrategia de Pruebas (Testing)
-### Decisión: Testing Pragmático y Dirigido
-Para evitar redundancia de tests y aprovechar el core genérico:
-- **Core Asíncrono (`BaseDataBloc` y `State`)**: Se testa al 100% una sola vez. Garantiza que las transiciones de estado (`loading`, `success`, `error`) funcionen por defecto en todo el proyecto.
-- **Features (BLoC)**: Se utiliza `blocTest` enfocado estrictamente en verificar que la lógica de negocio emita el flujo correcto (ej. `Initial state` y los estados exitosos). No se re-testean flujos de errores genéricos que ya cubre el core.
-- **Inyección de Dependencias**: Se incluyen smoke tests (`testWidgets`) para validar que las listas de providers (ej. `athBlocs`, `athInjector`) inyecten y expongan correctamente las dependencias en el árbol de Flutter (`context.read`).
-- **Data y Red**: Se mockean clientes HTTP (ej. Dio) usando `mocktail`. Los Repositorios se testean validando rigurosamente su capacidad para atrapar excepciones específicas y devolver clases seguras `Either<Failure, T>`.
-
-## 8. Singletons & Dependency Injection
-### Decisión: Singletons Pasados por Inyección
-Los Singletons (ej. `NetworkInfo.instance`, `DsbLocalStore.instance`) se utilizan para servicios globales o acceso a bases de datos locales. Para mantener la testeabilidad y respetar los principios de arquitectura limpia, estas instancias estáticas deben ser inyectadas en los constructores de los Repositorios a través de los Inyectores de dependencia (ej. `dsbInjector()`), en lugar de consumirse directamente en los métodos internos. Esto permite usar mocks fácilmente y controlar de forma determinista la ausencia de conexión, retornando clases concretas de error como `NotInternetFailure`.
-
-## 9. Server Driven UI (SDUI)
-### Decisión: Implementación mediante Patrón Registry y JSON
-Para soportar interfaces dinámicas (ej. Banners promocionales, ofertas), la arquitectura incluye un motor SDUI nativo.
-- El servidor envía un árbol JSON definiendo nodos (`type`, `properties`, `children`).
-- El cliente utiliza `SduiNodeEntity` y `SduiRegistry` (Singleton factory) para mapear esos tipos a Widgets reales (ej. `text` -> `Text`, `column` -> `Column`).
-- Si un componente no está registrado, se renderiza un `SizedBox.shrink()` como *fallback* evitando fallos fatales en producción.
-- Toda la validación de nulos al parsear el JSON depende de `JsonMap`.
-
-## 10. Variables de Entorno (Environment Variables)
-### Decisión: Separación de URLs usando `.env` y `flutter_dotenv`
-Todas las rutas base de APIs, tokens o variables sensibles deben almacenarse en archivos de entorno (`.env`) en lugar de estar quemadas (hardcoded) en el código. Si no se encuentra configurada, la aplicación lanzará una excepción (Fail-Fast) para evitar falsos positivos y nunca exponer datos por defecto.
-*(Nota: Para propósitos de pruebas técnicas o revisión, el archivo `.env` se incluye temporalmente en el repositorio, pero en un entorno corporativo real este archivo es ignorado por git (`.gitignore`) y los secretos se inyectan a través de CI/CD).*
-
-## 11. Integración con Servicios Externos (Ecosistema) y Push Notifications
-### Decisión: Servicios Modulares Inyectables
-Para integrar servicios externos de analítica/engagement (ej. `CleverTap` o `Amplitude`) y envío de notificaciones push (ej. `Firebase Cloud Messaging`), hemos creado clases `Singleton` dentro de `lib/core/services`.
-- **AnalyticsService**: Centraliza toda recolección de eventos para evitar mezclar lógica de negocio del banco con SDKs de marketing. Permite traquear fallos de UX para generar funnels en herramientas de análisis.
-- **PushNotificationService**: Configura los canales en Android/iOS usando `flutter_local_notifications` permitiendo reaccionar a cargas útiles en background para notificar al usuario (ej. de transacciones sospechosas o exitosas).
-
-## 12. Monitoreo y Observabilidad en Producción
-### Decisión: Estrategia de Triangulación (Crashlytics, APM, Sentry)
-Siendo una aplicación Fintech (Crítica Nivel 1), el monitoreo en producción requiere detectar problemas operativos y de UX en tiempo real. Estrategia a utilizar:
-1. **Detección de Errores Fatales (Crashlytics / Sentry):** Todo fallo no atrapado y las excepciones semánticas (ej. `NotInternetFailure` o `ParseException`) deben registrarse automáticamente. El interceptor de red envía métricas sobre todos los Status Code `4xx` y `5xx`.
-2. **Rendimiento APM (Firebase Performance / Datadog):** Monitorear la latencia (TTFB) de los microservicios del banco. Si la carga del Dashboard excede los X milisegundos de forma concurrente, dispara una alerta (PagerDuty).
-3. **Observabilidad UX (CleverTap / Amplitude):** Utilizando el `AnalyticsService`, registramos eventos customizados como `login_failed_biometrics` o `dashboard_timeout`. Permite identificar problemas en los que la app no crashea, pero los usuarios no pueden completar sus tareas (degradación de experiencia).
+## 5. Inyección de Dependencias Modular
+- **Problema a resolver:** Evitar el patrón Singleton global (un antipatrón en Flutter moderno) para Repositorios y Datasources, asegurando que el ciclo de vida de los datos viva y muera junto a la interfaz (Contexto).
+- **Alternativas evaluadas:**
+  - *get_it / injectable:* Muy populares, pero instancian clases globalmente y pueden causar fugas de memoria si no se desechan correctamente.
+  - *Riverpod:* Excelente y seguro, pero requería cambiar de paradigma BLoC a Providers puros, lo cual choca con estándares bancarios clásicos.
+- **Opción seleccionada:** *Inyección basada puramente en Flutter BLoC (`MultiRepositoryProvider`)* usando constructores modulares por Feature (ej. `athInjector()`).
+- **Trade-offs:** El árbol de widgets principal (`main.dart`) se vuelve visualmente un poco más largo, pero la dependencia se resuelve explícitamente en el DOM y es determinista.
+- **Impacto a largo plazo:** Facilita enormemente el *Testing Unitario y de Widgets*. Al no haber variables globales, es trivial inyectar implementaciones `Mock` o falsas de cualquier repositorio para probar casos extremos en el CI/CD.
