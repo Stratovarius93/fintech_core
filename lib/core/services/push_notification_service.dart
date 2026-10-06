@@ -24,6 +24,23 @@ class PushNotificationService {
     debugPrint('[PushNotificationService] Initialized');
   }
 
+  Future<bool> requestPermission() async {
+    bool? granted = false;
+    
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      granted = await androidPlugin.requestNotificationsPermission();
+    }
+
+    final iosPlugin = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    if (iosPlugin != null) {
+      granted = await iosPlugin.requestPermissions(alert: true, badge: true, sound: true);
+    }
+    
+    debugPrint('[PushNotificationService] Permissions Granted: $granted');
+    return granted ?? false;
+  }
+
   /// Allows launching test notifications or rendering silent notifications
   /// sent via Firebase Messaging (FCM).
   Future<void> showNotification({required String title, required String body}) async {

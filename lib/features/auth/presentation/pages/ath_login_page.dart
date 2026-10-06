@@ -5,6 +5,7 @@ import '../../../../core/data_async_value/base_async_value_bloc.dart';
 import '../bloc/ath_auth_bloc.dart';
 import '../../domain/entities/ath_user_entity.dart';
 import '../../../../features/dashboard/presentation/pages/dsb_dashboard_page.dart';
+import '../../../../core/utils/permission_util.dart';
 
 class AthLoginPage extends StatefulWidget {
   const AthLoginPage({super.key});
@@ -38,18 +39,22 @@ class _AthLoginPageState extends State<AthLoginPage> {
           const SizedBox(height: 16),
           TextField(
             controller: _passwordController,
-            decoration: const InputDecoration(labelText: 'Contraseña'),
+            decoration: const InputDecoration(labelText: 'Password'),
             obscureText: true,
           ),
           const SizedBox(height: 32),
           ElevatedButton(
-            onPressed: () {
-              context.read<AthAuthBloc>().login(
-                    _emailController.text,
-                    _passwordController.text,
-                  );
+            onPressed: () async {
+              await PermissionUtil.instance.requestPushPermissionWithWarning(context);
+              
+              if (context.mounted) {
+                context.read<AthAuthBloc>().login(
+                      _emailController.text,
+                      _passwordController.text,
+                    );
+              }
             },
-            child: const Text('Iniciar Sesión'),
+            child: const Text('Login'),
           ),
         ],
       ),
@@ -74,7 +79,7 @@ class _AthLoginPageState extends State<AthLoginPage> {
             success: () {
               if (state.value != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Bienvenido ${state.value!.email}')),
+                  SnackBar(content: Text('Welcome ${state.value!.email}')),
                 );
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(

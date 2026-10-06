@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fintech_core/core/data_async_value/base_async_value_bloc.dart';
 import 'package:fintech_core/core/errors/failures.dart';
 import 'package:fintech_core/core/sdui/sdui_parser.dart';
+import 'package:fintech_core/core/utils/fraud_alert_simulator.dart';
 import 'package:fintech_core/features/dashboard/domain/entities/dsb_summary_entity.dart';
 import 'package:fintech_core/features/dashboard/presentation/bloc/dsb_summary_bloc.dart';
 
@@ -25,6 +26,13 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notification_important, color: Colors.redAccent),
+            tooltip: 'Simulate Fraud Alert',
+            onPressed: () => FraudAlertSimulator.instance.simulate(context),
+          ),
+        ],
       ),
       body: BlocBuilder<DsbSummaryBloc, BaseAsyncValueState<DsbSummaryEntity>>(
         builder: (context, state) {
