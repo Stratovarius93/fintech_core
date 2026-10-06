@@ -8,6 +8,34 @@ A continuación se detallan las decisiones arquitectónicas clave tomadas durant
   - *Layer-First (MVC/MVVM clásico):* Agrupar por capas lógicas (todos los modelos juntos, todos los blocs juntos).
   - *Clean Architecture Clásica:* Uso riguroso de Casos de Uso (Use Cases) e interfaces abstractas para cada interacción.
 - **Opción seleccionada:** *Pragmatic Clean Architecture (Feature-First)*. Agrupación física por funcionalidades (`features`), eliminando la capa redundante de *Casos de Uso* y comunicando directamente el BLoC con el Repositorio.
+
+**Estructura Gráfica de un Feature:**
+```text
+lib/features/dashboard/
+├── data/
+│   ├── datasources/
+│   │   ├── interfaces/dsb_i_network_data_source.dart
+│   │   └── dsb_network_data_source.dart
+│   ├── mappers/
+│   │   └── dsb_summary_mapper.dart
+│   └── models/
+│       └── dsb_summary_model.dart
+├── domain/
+│   ├── entities/
+│   │   └── dsb_summary_entity.dart
+│   └── repositories/
+│       ├── interfaces/dsb_i_repository.dart
+│       └── dsb_repository.dart
+├── presentation/
+│   ├── bloc/
+│   │   ├── dsb_summary_bloc.dart
+│   │   └── dsb_summary_params.dart
+│   ├── pages/
+│   │   └── dsb_dashboard_page.dart
+│   └── widgets/
+└── dsb_injector.dart
+```
+
 - **Trade-offs:** Se sacrifica la pureza teórica estricta de Clean Architecture (al no tener interactors aislados) a cambio de una altísima velocidad de desarrollo y menor *boilerplate*.
 - **Impacto a largo plazo:** Permite escalar fácilmente hacia arquitecturas de Micro-Frontends. Cada "feature" puede aislarse y empaquetarse en un submódulo independiente sin romper el resto de la app, facilitando el trabajo paralelo de cientos de desarrolladores.
 
@@ -36,6 +64,19 @@ A continuación se detallan las decisiones arquitectónicas clave tomadas durant
   - *Firebase Remote Config:* Excelente para variables simples, pero limita el dinamismo a estructuras pre-definidas y no a componentes UI enteros.
   - *Librerías completas de SDUI:* Como `mirai` o `json_dynamic_widget`. Muy pesadas, dependientes de terceros y con exceso de funcionalidades.
 - **Opción seleccionada:** *Motor SDUI propio + API Serverless (Google Apps Script)*. Se creó un `SduiRegistry` que mapea JSONs ligeros a componentes nativos de Flutter. Como backend rápido para el MVP, se integró una hoja de cálculo de Google Sheets que actúa como API REST para modificar el diseño desde la nube en tiempo real.
+
+**Flujo de Server Driven UI:**
+```mermaid
+graph TD
+    A[Google Sheets API] -- Retorna JSON --> B(NetworkSimulatorInterceptor)
+    B -- Inyecta JSON en Payload --> C(DsbSummaryMapper)
+    C -- Convierte a Objeto Dart --> D[SduiNodeEntity]
+    D -- Envía al Motor de Render --> E{SduiRegistry}
+    E -- type: 'promo' --> F[buildBannerPromo]
+    E -- type: 'desconocido' --> G[SizedBox.shrink]
+    F -- Renderiza UI --> H((Widgets de Flutter))
+```
+
 - **Trade-offs:** El motor propio inicial solo cubre los widgets estrictamente necesarios (Text, Container, Banner). Además, usar Google Sheets es una solución creativa temporal para validación rápida (MVP), pero requerirá migración a un backend formal (AWS/Azure) antes de ir a producción masiva.
 - **Impacto a largo plazo:** Desacopla la vista de la lógica dura. En el futuro, el equipo de marketing o producto puede construir promociones y pantallas desde un CMS propietario sin requerir el despliegue de los desarrolladores móviles.
 
