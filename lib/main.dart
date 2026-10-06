@@ -24,17 +24,23 @@ void main() async {
   await AnalyticsService.instance.init();
   await CrashlyticsService.instance.init();
 
-  runApp(const MyApp());
+  FlutterError.onError = (details) {
+    CrashlyticsService.instance.recordError(details.exception, details.stack);
+  };
+  
+  final dioClient = DioClient();
+  runApp(MyApp(dioClient: dioClient));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.dioClient});
+
+  /// Optional HTTP client override (used by E2E tests to control the
+  /// network simulator). When null, the default chaos-enabled client is used.
+  final DioClient dioClient;
 
   @override
   Widget build(BuildContext context) {
-    // Initialize DioClient (which includes the NetworkSimulatorInterceptor)
-    final dioClient = DioClient();
-
     return MultiRepositoryProvider(
       providers: [
         ...athInjector(dioClient),

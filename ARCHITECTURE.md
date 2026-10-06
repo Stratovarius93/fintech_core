@@ -14,7 +14,7 @@ A continuación se detallan las decisiones arquitectónicas clave tomadas durant
 lib/features/dashboard/
 ├── data/
 │   ├── datasources/
-│   │   ├── interfaces/dsb_i_network_data_source.dart
+│   │   ├── dsb_local_store.dart
 │   │   └── dsb_network_data_source.dart
 │   ├── mappers/
 │   │   └── dsb_summary_mapper.dart
@@ -32,7 +32,6 @@ lib/features/dashboard/
 │   │   └── dsb_summary_params.dart
 │   ├── pages/
 │   │   └── dsb_dashboard_page.dart
-│   └── widgets/
 └── dsb_injector.dart
 ```
 
@@ -86,5 +85,5 @@ graph TD
   - *get_it / injectable:* Muy populares, pero instancian clases globalmente y pueden causar fugas de memoria si no se desechan correctamente.
   - *Riverpod:* Excelente y seguro, pero requería cambiar de paradigma BLoC a Providers puros, lo cual choca con estándares bancarios clásicos.
 - **Opción seleccionada:** *Inyección basada puramente en Flutter BLoC (`MultiRepositoryProvider`)* usando constructores modulares por Feature (ej. `athInjector()`).
-- **Trade-offs:** El árbol de widgets principal (`main.dart`) se vuelve visualmente un poco más largo, pero la dependencia se resuelve explícitamente en el DOM y es determinista.
+- **Trade-offs:** El árbol de widgets principal (`main.dart`) se vuelve visualmente un poco más largo, pero la dependencia se resuelve explícitamente en el DOM y es determinista. Excepción justificada: los servicios *cross-cutting* transversales (`CrashlyticsService`, `SduiRegistry`) y puentes locales (`DsbLocalStore`) utilizan Singletons estáticos porque su ciclo de vida está atado estrictamente a la Aplicación (`main.dart`) y evitan la re-inicialización costosa de plugins nativos.
 - **Impacto a largo plazo:** Facilita enormemente el *Testing Unitario y de Widgets*. Al no haber variables globales, es trivial inyectar implementaciones `Mock` o falsas de cualquier repositorio para probar casos extremos en el CI/CD.

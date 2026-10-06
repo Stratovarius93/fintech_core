@@ -45,11 +45,24 @@ class DsbSummaryEntity extends Equatable {
   const DsbSummaryEntity({
     required this.accounts,
     this.dynamicBanner,
+    this.isFromCache = false,
   });
 
   final List<DsbAccountEntity> accounts;
   final SduiNode? dynamicBanner;
 
+  /// True when the data was served from the local cache instead of the
+  /// network (offline mode). The UI uses it to warn about stale balances.
+  final bool isFromCache;
+
+  DsbSummaryEntity copyWith({bool? isFromCache}) {
+    return DsbSummaryEntity(
+      accounts: accounts,
+      dynamicBanner: dynamicBanner,
+      isFromCache: isFromCache ?? this.isFromCache,
+    );
+  }
+
   @override
-  List<Object?> get props => [accounts, dynamicBanner];
+  List<Object?> get props => [accounts, dynamicBanner, isFromCache];
 }

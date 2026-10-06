@@ -29,6 +29,12 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
         title: const Text('Dashboard'),
         actions: [
           IconButton(
+            key: const Key('dsb_refresh_button'),
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () => context.read<DsbSummaryBloc>().getSummary(),
+          ),
+          IconButton(
             icon: const Icon(
               Icons.notification_important,
               color: Colors.redAccent,
@@ -61,6 +67,9 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
 
               return Column(
                 children: [
+                  if (summary.isFromCache) _OfflineCacheBanner(
+                    onRetry: () => context.read<DsbSummaryBloc>().getSummary(),
+                  ),
                   if (summary.dynamicBanner != null)
                     Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -217,6 +226,7 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
             error: () {
               if (state.failure is NotInternetFailure) {
                 return Center(
+                  key: const Key('dsb_no_internet_view'),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -233,6 +243,7 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
+                        key: const Key('dsb_no_internet_retry_button'),
                         onPressed: () =>
                             context.read<DsbSummaryBloc>().getSummary(),
                         icon: const Icon(Icons.refresh),
@@ -253,6 +264,7 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
+                      key: const Key('dsb_error_retry_button'),
                       onPressed: () =>
                           context.read<DsbSummaryBloc>().getSummary(),
                       icon: const Icon(Icons.refresh),
@@ -264,6 +276,45 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+/// Informs the user that balances come from the local cache (offline mode)
+/// and may be outdated, offering a retry to fetch fresh data.
+class _OfflineCacheBanner extends StatelessWidget {
+  const _OfflineCacheBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('dsb_offline_banner'),
+        width: double.infinity,
+        color: colors.tertiaryContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off, color: colors.onTertiaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'You are offline. Showing your last saved data.',
+                style: TextStyle(color: colors.onTertiaryContainer),
+              ),
+            ),
+            TextButton(
+              key: const Key('dsb_offline_banner_retry_button'),
+              onPressed: onRetry,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

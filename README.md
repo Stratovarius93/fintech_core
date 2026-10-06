@@ -76,6 +76,11 @@ Para correr toda la suite de pruebas unitarias y de widgets (repositorios, BLoCs
 flutter test
 ```
 
+Para correr la prueba **E2E automatizada** (Integration Test) del flujo crítico de resiliencia offline. Es muy útil para **grabar la evidencia** de cómo la app recupera los datos desde la caché:
+```bash
+flutter test integration_test/critical_flow_offline_recovery_test.dart
+```
+
 Para validar la sintaxis y reglas estrictas del linter:
 ```bash
 flutter analyze
@@ -88,6 +93,6 @@ flutter analyze
 Si te unes al equipo, por favor respeta las siguientes reglas de gobierno de código:
 
 1. **Trunk Based Development (TBD):** Integramos directo al tronco (`main`). Realiza *commits* pequeños y frecuentes. Si construyes algo a medias, apágalo tras un *Feature Flag*.
-2. **Sigue a la IA Arquitecta:** Revisa nuestro archivo base `.agents/agents/architect.md` (o `ai/agents/architect.md`). Es el manual rector que asegura que todo desarrollador (y otras IAs) mantengan la estructura `Feature-First` intacta.
+2. **Sigue a la IA Arquitecta:** Revisa nuestro archivo base `.agents/agents/architect/agent.md`. Es el manual rector que asegura que todo desarrollador (y otras IAs) mantengan la estructura `Feature-First` intacta.
 3. **No reinventes la rueda:** Todos los BLoCs nuevos deben heredar del núcleo `BaseDataBloc`.
 4. **Cero Crash por nulos:** Todo JSON entrante debe parsearse utilizando el wrapper de seguridad `JsonMap`.

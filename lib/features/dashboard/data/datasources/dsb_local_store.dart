@@ -35,4 +35,10 @@ class DsbLocalStore {
     }
     return null;
   }
+
+  /// Removes the cached summary (e.g. on logout or to reset E2E scenarios).
+  Future<void> clear() async {
+    final box = await Hive.openBox(_boxName);
+    await box.delete(_key);
+  }
 }

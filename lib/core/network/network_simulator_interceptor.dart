@@ -10,10 +10,18 @@ class NetworkSimulatorInterceptor extends Interceptor {
   NetworkSimulatorInterceptor({
     this.enableSimulation = true,
     this.failureRate = 0.15, // 15% chance of network failure
-  });
+    this.minLatency = const Duration(milliseconds: 1000),
+    this.maxLatency = const Duration(milliseconds: 3000),
+  }) : assert(maxLatency >= minLatency);
 
   final bool enableSimulation;
   final double failureRate;
+
+  /// Lower bound of the simulated latency.
+  final Duration minLatency;
+
+  /// Upper bound of the simulated latency.
+  final Duration maxLatency;
   final _random = Random();
 
   @override
@@ -25,8 +33,10 @@ class NetworkSimulatorInterceptor extends Interceptor {
       return super.onRequest(options, handler);
     }
 
-    // 1. Simulate high latency (1000ms to 3000ms delay)
-    final delay = _random.nextInt(2000) + 1000;
+    // 1. Simulate high latency (between minLatency and maxLatency)
+    final spread = maxLatency.inMilliseconds - minLatency.inMilliseconds;
+    final delay =
+        minLatency.inMilliseconds + (spread > 0 ? _random.nextInt(spread) : 0);
     await Future.delayed(Duration(milliseconds: delay));
 
     // 2. Simulate partial unavailability or timeout

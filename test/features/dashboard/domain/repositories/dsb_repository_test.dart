@@ -5,12 +5,15 @@ import 'package:fintech_core/core/errors/exceptions/server_exception.dart';
 import 'package:fintech_core/core/errors/exceptions/parse_exception.dart';
 import 'package:fintech_core/core/network/network_info.dart';
 import 'package:fintech_core/features/dashboard/data/datasources/dsb_local_store.dart';
-import 'package:fintech_core/features/dashboard/data/datasources/dsb_network_data_source.dart';
 import 'package:fintech_core/features/dashboard/domain/repositories/dsb_repository.dart';
 import 'package:fintech_core/features/dashboard/data/models/dsb_summary_model.dart';
 
-class MockDsbNetworkDataSource extends Mock implements DsbNetworkDataSource {}
+import 'package:fintech_core/features/dashboard/data/datasources/interfaces/dsb_i_network_data_source.dart';
+
+class MockDsbNetworkDataSource extends Mock implements DsbINetworkDataSource {}
+
 class MockNetworkInfo extends Mock implements NetworkInfo {}
+
 class MockDsbLocalStore extends Mock implements DsbLocalStore {}
 
 void main() {
@@ -27,10 +30,10 @@ void main() {
     mockDataSource = MockDsbNetworkDataSource();
     mockNetworkInfo = MockNetworkInfo();
     mockLocalStore = MockDsbLocalStore();
-    
+
     when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
     when(() => mockLocalStore.saveSummary(any())).thenAnswer((_) async {});
-    
+
     repository = DsbRepository(
       dataSource: mockDataSource,
       networkInfo: mockNetworkInfo,
@@ -49,8 +52,8 @@ void main() {
           createdAt: tDate,
           isActive: true,
           transactions: const [],
-        )
-      ]
+        ),
+      ],
     );
 
     test(
@@ -64,6 +67,7 @@ void main() {
         result.fold((l) => fail('Should be Right'), (r) {
           expect(r.accounts.first.balance, 100.0);
           expect(r.accounts.first.accountNumber, '123');
+          expect(r.isFromCache, false);
         });
       },
     );
@@ -72,12 +76,10 @@ void main() {
       'should return Left(ServiceFailure) when ServerException occurs',
       () async {
         when(() => mockDataSource.getSummary()).thenThrow(
-          ServerException(
-            where: 'summary',
-            statusCode: 500,
-            message: 'Error',
-          ),
+          ServerException(where: 'summary', statusCode: 500, message: 'Error'),
         );
+
+        when(() => mockLocalStore.getSummary()).thenAnswer((_) async => null);
 
         final result = await repository.getSummary();
 
@@ -92,9 +94,9 @@ void main() {
     test(
       'should return Left(GeneralFailure) when ParseException occurs',
       () async {
-        when(() => mockDataSource.getSummary()).thenThrow(
-          ParseException(where: 'summary', message: 'Parse error'),
-        );
+        when(
+          () => mockDataSource.getSummary(),
+        ).thenThrow(ParseException(where: 'summary', message: 'Parse error'));
 
         final result = await repository.getSummary();
 
@@ -106,20 +108,19 @@ void main() {
       },
     );
 
-    test(
-      'should return cached model when offline',
-      () async {
-        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-        when(() => mockLocalStore.getSummary()).thenAnswer((_) async => tModel);
+    test('should return cached model when offline', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
+      when(() => mockLocalStore.getSummary()).thenAnswer((_) async => tModel);
 
-        final result = await repository.getSummary();
+      final result = await repository.getSummary();
 
-        expect(result.isRight(), true);
-        result.fold((l) => fail('Should be Right'), (r) {
-          expect(r.accounts.first.balance, 100.0);
-        });
-      },
-    );
+      expect(result.isRight(), true);
+      result.fold((l) => fail('Should be Right'), (r) {
+        expect(r.accounts.first.balance, 100.0);
+        expect(r.isFromCache, true);
+      });
+      verifyNever(() => mockDataSource.getSummary());
+    });
 
     test(
       'should return Left(NotInternetFailure) when offline and no cache',
@@ -132,7 +133,10 @@ void main() {
         expect(result.isLeft(), true);
         result.fold((l) {
           expect(l, isA<NotInternetFailure>());
-          expect(l.message, 'No internet connection and no cached data available');
+          expect(
+            l.message,
+            'No internet connection and no cached data available',
+          );
         }, (r) => fail('Should be Left'));
       },
     );

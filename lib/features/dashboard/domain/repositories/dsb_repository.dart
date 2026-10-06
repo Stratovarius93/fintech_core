@@ -4,7 +4,7 @@ import 'package:fintech_core/core/errors/exceptions/server_exception.dart';
 import 'package:fintech_core/core/errors/exceptions/parse_exception.dart';
 import 'package:fintech_core/core/network/network_info.dart';
 import 'package:fintech_core/features/dashboard/data/datasources/dsb_local_store.dart';
-import 'package:fintech_core/features/dashboard/data/datasources/dsb_network_data_source.dart';
+import 'package:fintech_core/features/dashboard/data/datasources/interfaces/dsb_i_network_data_source.dart';
 import 'package:fintech_core/features/dashboard/data/mappers/dsb_summary_mapper.dart';
 import 'package:fintech_core/features/dashboard/domain/entities/dsb_summary_entity.dart';
 import 'package:fintech_core/features/dashboard/domain/repositories/interfaces/dsb_i_repository.dart';
@@ -16,7 +16,7 @@ class DsbRepository implements DsbIRepository {
     required this.localStore,
   });
 
-  final DsbNetworkDataSource dataSource;
+  final DsbINetworkDataSource dataSource;
   final NetworkInfo networkInfo;
   final DsbLocalStore localStore;
 
@@ -31,6 +31,11 @@ class DsbRepository implements DsbIRepository {
         
         return Right(model.toEntity());
       } on ServerException catch (e) {
+        // Attempt to retrieve from local cache when server fails
+        final cachedModel = await localStore.getSummary();
+        if (cachedModel != null) {
+          return Right(cachedModel.toEntity().copyWith(isFromCache: true));
+        }
         return Left(ServiceFailure(e.message, code: e.statusCode));
       } on ParseException catch (e) {
         return Left(GeneralFailure(e.message));
@@ -41,7 +46,7 @@ class DsbRepository implements DsbIRepository {
       // Attempt to retrieve from local cache when offline
       final cachedModel = await localStore.getSummary();
       if (cachedModel != null) {
-        return Right(cachedModel.toEntity());
+        return Right(cachedModel.toEntity().copyWith(isFromCache: true));
       } else {
         return Left(const NotInternetFailure('No internet connection and no cached data available'));
       }

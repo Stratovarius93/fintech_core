@@ -32,18 +32,21 @@ class _AthLoginPageState extends State<AthLoginPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           TextField(
+            key: const Key('ath_email_field'),
             controller: _emailController,
             decoration: const InputDecoration(labelText: 'Email'),
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 16),
           TextField(
+            key: const Key('ath_password_field'),
             controller: _passwordController,
             decoration: const InputDecoration(labelText: 'Password'),
             obscureText: true,
           ),
           const SizedBox(height: 32),
           ElevatedButton(
+            key: const Key('ath_login_button'),
             onPressed: () async {
               await PermissionUtil.instance.requestPushPermissionWithWarning(context);
               
