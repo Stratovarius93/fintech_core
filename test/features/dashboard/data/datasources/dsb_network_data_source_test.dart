@@ -24,9 +24,16 @@ void main() {
   group('getSummary', () {
     final tResponse = {
       'data': {
-        'total_balance': 1000.0,
-        'account_number': '123',
-        'recent_transactions': []
+        'accounts': [
+          {
+            'account_name': 'Test Account',
+            'account_number': '123',
+            'balance': 1000.0,
+            'created_at': '2023-11-24T23:49:13.000-05:00',
+            'is_active': true,
+            'transactions': []
+          }
+        ]
       }
     };
 
@@ -43,7 +50,7 @@ void main() {
       final result = await dataSource.getSummary();
 
       expect(result, isA<DsbSummaryModel>());
-      expect(result.totalBalance, 1000.0);
+      expect(result.accounts?.first.balance, 1000.0);
     });
 
     test('should throw ServerException when Dio throws DioException', () async {

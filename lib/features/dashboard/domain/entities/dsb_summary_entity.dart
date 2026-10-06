@@ -20,19 +20,36 @@ class DsbTransactionEntity extends Equatable {
   List<Object?> get props => [id, date, amount, description, isCredit];
 }
 
+class DsbAccountEntity extends Equatable {
+  const DsbAccountEntity({
+    required this.accountName,
+    required this.accountNumber,
+    required this.balance,
+    required this.createdAt,
+    required this.isActive,
+    required this.transactions,
+  });
+
+  final String accountName;
+  final String accountNumber;
+  final double balance;
+  final DateTime createdAt;
+  final bool isActive;
+  final List<DsbTransactionEntity> transactions;
+
+  @override
+  List<Object?> get props => [accountName, accountNumber, balance, createdAt, isActive, transactions];
+}
+
 class DsbSummaryEntity extends Equatable {
   const DsbSummaryEntity({
-    required this.totalBalance,
-    required this.accountNumber,
-    required this.recentTransactions,
+    required this.accounts,
     this.dynamicBanner,
   });
 
-  final double totalBalance;
-  final String accountNumber;
-  final List<DsbTransactionEntity> recentTransactions;
+  final List<DsbAccountEntity> accounts;
   final SduiNode? dynamicBanner;
 
   @override
-  List<Object?> get props => [totalBalance, accountNumber, recentTransactions, dynamicBanner];
+  List<Object?> get props => [accounts, dynamicBanner];
 }

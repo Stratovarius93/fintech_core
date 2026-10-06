@@ -39,10 +39,18 @@ void main() {
   });
 
   group('getSummary', () {
-    const tModel = DsbSummaryModel(
-      totalBalance: 100.0,
-      accountNumber: '123',
-      recentTransactions: [],
+    final tDate = DateTime.now();
+    final tModel = DsbSummaryModel(
+      accounts: [
+        DsbAccountModel(
+          accountName: 'Test Account',
+          accountNumber: '123',
+          balance: 100.0,
+          createdAt: tDate,
+          isActive: true,
+          transactions: const [],
+        )
+      ]
     );
 
     test(
@@ -54,8 +62,8 @@ void main() {
 
         expect(result.isRight(), true);
         result.fold((l) => fail('Should be Right'), (r) {
-          expect(r.totalBalance, 100.0);
-          expect(r.accountNumber, '123');
+          expect(r.accounts.first.balance, 100.0);
+          expect(r.accounts.first.accountNumber, '123');
         });
       },
     );
@@ -108,7 +116,7 @@ void main() {
 
         expect(result.isRight(), true);
         result.fold((l) => fail('Should be Right'), (r) {
-          expect(r.totalBalance, 100.0);
+          expect(r.accounts.first.balance, 100.0);
         });
       },
     );

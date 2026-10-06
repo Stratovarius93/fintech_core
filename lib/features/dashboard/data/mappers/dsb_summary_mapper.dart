@@ -13,13 +13,23 @@ extension DsbTransactionModelX on DsbTransactionModel {
   }
 }
 
+extension DsbAccountModelX on DsbAccountModel {
+  DsbAccountEntity toEntity() {
+    return DsbAccountEntity(
+      accountName: accountName ?? '',
+      accountNumber: accountNumber ?? '',
+      balance: balance ?? 0.0,
+      createdAt: createdAt ?? DateTime.now(),
+      isActive: isActive ?? false,
+      transactions: transactions?.map((e) => e.toEntity()).toList() ?? [],
+    );
+  }
+}
+
 extension DsbSummaryModelX on DsbSummaryModel {
   DsbSummaryEntity toEntity() {
     return DsbSummaryEntity(
-      totalBalance: totalBalance ?? 0.0,
-      accountNumber: accountNumber ?? '',
-      recentTransactions:
-          recentTransactions?.map((e) => e.toEntity()).toList() ?? [],
+      accounts: accounts?.map((e) => e.toEntity()).toList() ?? [],
       dynamicBanner: dynamicBanner,
     );
   }

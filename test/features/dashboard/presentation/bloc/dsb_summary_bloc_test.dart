@@ -14,10 +14,18 @@ void main() {
     late MockDsbIRepository repository;
     late DsbSummaryBloc bloc;
     
-    const tSummary = DsbSummaryEntity(
-      totalBalance: 100.0,
-      accountNumber: '123456',
-      recentTransactions: [],
+    final tDate = DateTime.now();
+    final tSummary = DsbSummaryEntity(
+      accounts: [
+        DsbAccountEntity(
+          accountName: 'Test Account',
+          accountNumber: '123456',
+          balance: 100.0,
+          createdAt: tDate,
+          isActive: true,
+          transactions: const [],
+        )
+      ]
     );
 
     setUp(() {
@@ -35,14 +43,14 @@ void main() {
     blocTest<DsbSummaryBloc, BaseAsyncValueState<DsbSummaryEntity>>(
       'Emits loading and loaded states when getSummary is successful',
       setUp: () => when(() => repository.getSummary())
-          .thenAnswer((_) async => const Right(tSummary)),
+          .thenAnswer((_) async => Right(tSummary)),
       build: () => bloc,
       act: (bloc) => bloc.getSummary(),
       expect: () => [
         const BaseAsyncValueState<DsbSummaryEntity>(
           status: ScreenStatusType.loading,
         ),
-        const BaseAsyncValueState<DsbSummaryEntity>(
+        BaseAsyncValueState<DsbSummaryEntity>(
           status: ScreenStatusType.success,
           value: tSummary,
         ),
