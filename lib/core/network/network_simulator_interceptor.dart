@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Interceptor designed to simulate real-world degraded network conditions.
 /// It injects random latency and occasional connection failures to ensure
@@ -56,8 +58,8 @@ class NetworkSimulatorInterceptor extends Interceptor {
               'data': {
                 'id': 'u_123',
                 'email': email,
-                'token': 'mock_jwt_token_12345'
-              }
+                'token': 'mock_jwt_token_12345',
+              },
             },
           ),
         );
@@ -66,17 +68,44 @@ class NetworkSimulatorInterceptor extends Interceptor {
           DioException(
             requestOptions: options,
             type: DioExceptionType.badResponse,
-            response: Response(
-              statusCode: 401,
-              requestOptions: options,
-            ),
+            response: Response(statusCode: 401, requestOptions: options),
             error: 'Invalid credentials',
           ),
         );
       }
     }
-    
+
     if (options.path.contains('/dashboard/summary')) {
+      Map<String, dynamic>? dynamicBanner;
+      try {
+        // Fetch real Server-Driven UI from Google Sheets
+        final dio = Dio();
+        final sduiUrl = dotenv.env['SDUI_URL'];
+        if (sduiUrl != null && sduiUrl.isNotEmpty) {
+          final bannerResponse = await dio.get(sduiUrl);
+
+          var responseData = bannerResponse.data;
+          if (responseData is String) {
+            responseData = jsonDecode(responseData);
+          }
+
+          if (responseData is Map<String, dynamic>) {
+            dynamicBanner = responseData;
+          } else if (responseData is List && responseData.isNotEmpty) {
+            dynamicBanner = responseData.first as Map<String, dynamic>;
+          }
+        }
+      } catch (e) {
+        // Fallback banner in case of external network failure
+        dynamicBanner = {
+          'type': 'banner',
+          'properties': {
+            'title': 'Fallback Pre-approved Loan!',
+            'subtitle': 'You have a pre-approved loan of \$10,000.',
+          },
+        };
+      }
+
       return handler.resolve(
         Response(
           requestOptions: options,
@@ -100,7 +129,9 @@ class NetworkSimulatorInterceptor extends Interceptor {
                     },
                     {
                       'id': 'tx_2',
-                      'date': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+                      'date': DateTime.now()
+                          .subtract(const Duration(days: 1))
+                          .toIso8601String(),
                       'amount': 2000.0,
                       'description': 'Payroll Salary',
                       'is_credit': true,
@@ -116,22 +147,18 @@ class NetworkSimulatorInterceptor extends Interceptor {
                   'transactions': [
                     {
                       'id': 'tx_3',
-                      'date': DateTime.now().subtract(const Duration(days: 5)).toIso8601String(),
+                      'date': DateTime.now()
+                          .subtract(const Duration(days: 5))
+                          .toIso8601String(),
                       'amount': 500.0,
                       'description': 'Transfer to Savings',
                       'is_credit': true,
                     },
                   ],
-                }
+                },
               ],
-              'dynamic_banner': {
-                'type': 'banner',
-                'properties': {
-                  'title': 'Pre-approved Loan!',
-                  'subtitle': 'You have a pre-approved loan of \$10,000.',
-                }
-              }
-            }
+              'dynamic_banner': dynamicBanner,
+            },
           },
         ),
       );

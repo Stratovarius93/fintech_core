@@ -58,6 +58,55 @@ class SduiRegistry {
             : null,
       );
     });
+
+    Widget buildBannerPromo(BuildContext context, SduiNode node) {
+      final title = node.properties['title']?.toString() ?? 'Promo';
+      final subtitle = node.properties['subtitle']?.toString() ?? '';
+      
+      return Container(
+        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Colors.blueAccent, Colors.purpleAccent],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.purpleAccent.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+            ]
+          ],
+        ),
+      );
+    }
+
+    register('promo', buildBannerPromo);
+    register('banner', buildBannerPromo);
   }
 
   void register(String type, SduiWidgetBuilder builder) {

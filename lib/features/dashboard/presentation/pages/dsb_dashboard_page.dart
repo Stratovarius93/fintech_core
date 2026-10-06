@@ -66,6 +66,21 @@ class _DsbDashboardPageState extends State<DsbDashboardPage> {
                       padding: const EdgeInsets.all(16.0),
                       child: SduiParserWidget(node: summary.dynamicBanner!),
                     ),
+                  if (summary.accounts.length > 1)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.swipe, color: Colors.grey, size: 16),
+                          SizedBox(width: 8),
+                          Text(
+                            'Swipe left/right to view other accounts',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
                   Expanded(
                     child: PageView.builder(
                       itemCount: summary.accounts.length,
